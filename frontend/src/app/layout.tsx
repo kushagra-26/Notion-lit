@@ -4,8 +4,14 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Notion Lite — Developer Life OS',
-  description: 'Personal productivity platform for developers',
+  title: {
+    default: 'Notion Lite',
+    template: '%s · Notion Lite',
+  },
+  description: 'Your personal Developer Life OS — notes, tasks, habits, journal and more.',
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({
