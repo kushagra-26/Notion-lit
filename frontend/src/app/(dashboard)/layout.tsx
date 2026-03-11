@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { CommandPalette } from '@/components/command-palette/CommandPalette';
 import { useAuth } from '@/contexts/AuthContext';
 import { CommandPaletteContext } from '@/contexts/CommandPaletteContext';
+import { SidebarProvider } from '@/contexts/SidebarContext';
 
 export default function DashboardLayout({
   children,
@@ -48,11 +49,13 @@ export default function DashboardLayout({
 
   return (
     <CommandPaletteContext.Provider value={{ open: () => setCmdOpen(true) }}>
-      <div className="flex h-screen overflow-hidden bg-background">
-        <Sidebar />
-        <main className="flex flex-1 flex-col overflow-hidden">{children}</main>
-        <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
-      </div>
+      <SidebarProvider>
+        <div className="flex h-screen overflow-hidden bg-background">
+          <Sidebar />
+          <main className="flex flex-1 flex-col overflow-hidden">{children}</main>
+          <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
+        </div>
+      </SidebarProvider>
     </CommandPaletteContext.Provider>
   );
 }

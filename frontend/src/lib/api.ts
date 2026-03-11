@@ -111,6 +111,7 @@ export const learningApi = {
 // ─── Stocks ──────────────────────────────
 export const stocksApi = {
   watchlist: () => api.get('/stocks/watchlist'),
+  search: (q: string) => api.get(`/stocks/search?q=${encodeURIComponent(q)}`),
   quote: (symbol: string) => api.get(`/stocks/quote/${symbol}`),
   add: (symbol: string) => api.post('/stocks/watchlist', { symbol }),
   remove: (symbol: string) => api.delete(`/stocks/watchlist/${symbol}`),

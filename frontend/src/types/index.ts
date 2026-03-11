@@ -133,13 +133,16 @@ export interface LearningTopic {
 
 export interface StockQuote {
   symbol: string;
+  name: string;
   price: number;
+  priceInr?: number;
   change: number;
   changePercent: number;
   high: number;
   low: number;
   volume: number;
   previousClose: number;
+  currency: string;
 }
 
 export interface WatchlistItem {
@@ -147,6 +150,12 @@ export interface WatchlistItem {
   symbol: string;
   quote: StockQuote | null;
   addedAt: string;
+}
+
+export interface SearchResult {
+  symbol: string;
+  name: string;
+  exchange: string;
 }
 
 // ─── GitHub ──────────────────────────────

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useSidebar } from '@/contexts/SidebarContext';
 import {
   LayoutDashboard,
   FileText,
@@ -40,6 +41,7 @@ const NAV_ITEMS = [
 export function Sidebar() {
   const pathname = usePathname();
   const router   = useRouter();
+  const { open, close } = useSidebar();
   const [creating, setCreating] = useState(false);
 
   async function handleNewPage() {
@@ -56,7 +58,21 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r border-border bg-card">
+    <>
+      {/* Mobile backdrop */}
+      {open && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={close}
+        />
+      )}
+
+    <aside className={cn(
+      'flex h-full w-60 shrink-0 flex-col border-r border-border bg-card transition-transform duration-200',
+      // Mobile: fixed overlay, slide in/out
+      'fixed inset-y-0 left-0 z-40 lg:static lg:translate-x-0',
+      open ? 'translate-x-0' : '-translate-x-full',
+    )}>
       {/* Logo */}
       <div className="flex h-14 items-center gap-2 border-b border-border px-4">
         <div className="flex h-6 w-6 items-center justify-center rounded bg-primary">
@@ -109,5 +125,6 @@ export function Sidebar() {
       {/* User menu at bottom */}
       <UserMenu />
     </aside>
+    </>
   );
 }

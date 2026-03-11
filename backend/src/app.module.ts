@@ -31,7 +31,7 @@ import { AiModule } from './ai/ai.module';
         database: config.get('DB_NAME', 'notion_lite'),
         autoLoadEntities: true,
         synchronize: config.get('NODE_ENV') !== 'production',
-        logging: config.get('NODE_ENV') === 'development',
+        logging: false,
       }),
       inject: [ConfigService],
     }),

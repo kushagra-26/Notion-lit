@@ -139,7 +139,7 @@ export default function AiPage() {
       const res = await aiApi.chat(history.map((m) => ({ role: m.role, content: m.content })));
       addMessage('model', res.data.reply);
     } catch {
-      addMessage('model', 'Sorry, I couldn\'t process that. Please check your GEMINI_API_KEY in the backend .env file.');
+      addMessage('model', 'Something went wrong. If the AI is not responding, restart the backend after saving your GEMINI_API_KEY in .env.');
     } finally {
       setLoading(false);
     }
@@ -286,12 +286,8 @@ export default function AiPage() {
 
           <div className="mt-auto rounded-lg border border-dashed border-border p-3">
             <p className="text-[11px] text-muted-foreground">
-              <strong className="text-foreground">Free tier limits:</strong><br />
-              15 requests/min · 1M tokens/min · 1,500 req/day
-            </p>
-            <p className="mt-1.5 text-[11px] text-muted-foreground">
-              Get your key at{' '}
-              <span className="text-primary">aistudio.google.com</span>
+              <strong className="text-foreground">Gemini 1.5 Flash · Free tier</strong><br />
+              15 req/min · 1,500 req/day · 1M tokens/min
             </p>
           </div>
         </aside>

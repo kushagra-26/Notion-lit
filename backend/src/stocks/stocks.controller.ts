@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Body,
-  Param,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { StocksService } from './stocks.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -16,7 +8,7 @@ import { IsString, IsNotEmpty, MaxLength } from 'class-validator';
 class AddToWatchlistDto {
   @IsString()
   @IsNotEmpty()
-  @MaxLength(10)
+  @MaxLength(20) // allow e.g. RELIANCE.NS
   symbol: string;
 }
 
@@ -25,31 +17,26 @@ class AddToWatchlistDto {
 export class StocksController {
   constructor(private readonly stocksService: StocksService) {}
 
-  /** GET /stocks/watchlist — full watchlist with live prices */
+  @Get('search')
+  search(@Query('q') q: string) {
+    return this.stocksService.searchSymbols(q ?? '');
+  }
+
   @Get('watchlist')
   getWatchlist(@CurrentUser() user: User) {
     return this.stocksService.getWatchlistWithPrices(user.id);
   }
 
-  /** POST /stocks/watchlist — add a symbol */
   @Post('watchlist')
-  addToWatchlist(
-    @CurrentUser() user: User,
-    @Body() body: AddToWatchlistDto,
-  ) {
+  addToWatchlist(@CurrentUser() user: User, @Body() body: AddToWatchlistDto) {
     return this.stocksService.addToWatchlist(user.id, body.symbol);
   }
 
-  /** DELETE /stocks/watchlist/:symbol — remove a symbol */
   @Delete('watchlist/:symbol')
-  removeFromWatchlist(
-    @Param('symbol') symbol: string,
-    @CurrentUser() user: User,
-  ) {
+  removeFromWatchlist(@Param('symbol') symbol: string, @CurrentUser() user: User) {
     return this.stocksService.removeFromWatchlist(user.id, symbol);
   }
 
-  /** GET /stocks/quote/:symbol — single live quote */
   @Get('quote/:symbol')
   getQuote(@Param('symbol') symbol: string) {
     return this.stocksService.getQuote(symbol);
