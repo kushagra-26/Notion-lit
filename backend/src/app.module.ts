@@ -21,22 +21,20 @@ import { SearchModule } from './search/search.module';
     ConfigModule.forRoot({ isGlobal: true }),
 
     // Database
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get('DB_HOST', 'localhost'),
-        port: config.get<number>('DB_PORT', 5432),
-        username: config.get('DB_USER', 'notion_user'),
-        password: config.get('DB_PASS', 'notion_pass'),
-        database: config.get('DB_NAME', 'notion_lite'),
-        autoLoadEntities: true,
-        synchronize: config.get('NODE_ENV') !== 'production',
-        logging: false,
-      }),
-      inject: [ConfigService],
-    }),
-
+ TypeOrmModule.forRootAsync({
+  imports: [ConfigModule],
+  useFactory: (config: ConfigService) => ({
+    type: 'postgres',
+    url: config.get<string>('DATABASE_URL'),
+    autoLoadEntities: true,
+    synchronize: config.get('NODE_ENV') !== 'production',
+    logging: false,
+    ssl: {
+      rejectUnauthorized: false,
+    },
+  }),
+  inject: [ConfigService],
+}),
     // Feature modules
     AuthModule,
     UsersModule,
