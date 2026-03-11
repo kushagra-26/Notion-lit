@@ -86,6 +86,18 @@ export const journalApi = {
   delete: (id: string) => api.delete(`/journal/${id}`),
 };
 
+// ─── AI ──────────────────────────────────
+export const aiApi = {
+  chat: (messages: { role: 'user' | 'model'; content: string }[]) =>
+    api.post<{ reply: string }>('/ai/chat', { messages }),
+  summarize: (content: string) =>
+    api.post<{ summary: string }>('/ai/summarize', { content }),
+  generateTasks: (description: string) =>
+    api.post<{ tasks: string }>('/ai/generate-tasks', { description }),
+  learningPlan: (topic: string, level?: string) =>
+    api.post<{ plan: string }>('/ai/learning-plan', { topic, level }),
+};
+
 // ─── Learning ────────────────────────────
 export const learningApi = {
   list: () => api.get('/learning'),

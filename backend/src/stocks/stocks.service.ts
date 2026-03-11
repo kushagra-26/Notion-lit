@@ -1,12 +1,6 @@
-import {
-  Injectable,
-  Logger,
-  ConflictException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import { StockWatchlist } from './stock-watchlist.entity';
 
 // ─── Public interfaces ────────────────────────────────────────────────────────
@@ -20,6 +14,7 @@ export interface StockQuote {
   low: number;
   volume: number;
   previousClose: number;
+  currency: string;
 }
 
 export interface WatchlistItem {
@@ -29,8 +24,6 @@ export interface WatchlistItem {
   addedAt: string;
 }
 
-// ─── Internal cache shape ─────────────────────────────────────────────────────
-
 interface QuoteCacheEntry {
   quote: StockQuote;
   timestamp: number;
@@ -38,77 +31,73 @@ interface QuoteCacheEntry {
 
 @Injectable()
 export class StocksService {
-  private readonly logger = new Logger(StocksService.name);
-
-  /** Per-symbol in-memory quote cache */
   private readonly quoteCache = new Map<string, QuoteCacheEntry>();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     @InjectRepository(StockWatchlist)
     private readonly watchlistRepo: Repository<StockWatchlist>,
-    private readonly config: ConfigService,
   ) {}
 
-  // ─── Fetch a single quote from Alpha Vantage ────────────────────
+  // ─── Fetch quote from Yahoo Finance (free, no API key) ──────────
+  // Supports US stocks (AAPL), Indian NSE (RELIANCE.NS), BSE (TCS.BO)
   async getQuote(symbol: string): Promise<StockQuote | null> {
-    const upperSymbol = symbol.toUpperCase();
+    const sym = symbol.toUpperCase();
 
-    // Return from cache if still fresh
-    const cached = this.quoteCache.get(upperSymbol);
+    const cached = this.quoteCache.get(sym);
     if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
-      this.logger.debug(`Cache hit for ${upperSymbol}`);
       return cached.quote;
     }
 
-    const apiKey = this.config.get<string>('ALPHA_VANTAGE_API_KEY');
-    if (!apiKey) {
-      this.logger.warn('ALPHA_VANTAGE_API_KEY is not set — skipping quote fetch');
-      return null;
-    }
-
     try {
-      const url =
-        `https://www.alphavantage.co/query` +
-        `?function=GLOBAL_QUOTE&symbol=${upperSymbol}&apikey=${apiKey}`;
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`;
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+      });
 
-      const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error(`Alpha Vantage error: ${res.status} ${res.statusText}`);
-      }
+      if (!res.ok) return cached?.quote ?? null;
 
       const body = (await res.json()) as {
-        'Global Quote': Record<string, string>;
+        chart: {
+          result: Array<{
+            meta: {
+              symbol: string;
+              regularMarketPrice: number;
+              chartPreviousClose: number;
+              regularMarketChangePercent: number;
+              regularMarketVolume: number;
+              regularMarketDayHigh: number;
+              regularMarketDayLow: number;
+              currency: string;
+            };
+          }> | null;
+          error: unknown;
+        };
       };
 
-      const raw = body['Global Quote'];
-      if (!raw || !raw['05. price']) {
-        this.logger.warn(`No quote data returned for ${upperSymbol}`);
-        return null;
-      }
+      const meta = body?.chart?.result?.[0]?.meta;
+      if (!meta?.regularMarketPrice) return cached?.quote ?? null;
 
+      const prev = meta.chartPreviousClose ?? meta.regularMarketPrice;
       const quote: StockQuote = {
-        symbol: upperSymbol,
-        price: parseFloat(raw['05. price']),
-        change: parseFloat(raw['09. change']),
-        changePercent: parseFloat(raw['10. change percent']?.replace('%', '') ?? '0'),
-        high: parseFloat(raw['03. high']),
-        low: parseFloat(raw['04. low']),
-        volume: parseInt(raw['06. volume'], 10),
-        previousClose: parseFloat(raw['08. previous close']),
+        symbol: sym,
+        price: meta.regularMarketPrice,
+        previousClose: prev,
+        change: parseFloat((meta.regularMarketPrice - prev).toFixed(2)),
+        changePercent: parseFloat((meta.regularMarketChangePercent ?? 0).toFixed(2)),
+        high: meta.regularMarketDayHigh ?? meta.regularMarketPrice,
+        low: meta.regularMarketDayLow ?? meta.regularMarketPrice,
+        volume: meta.regularMarketVolume ?? 0,
+        currency: meta.currency ?? 'USD',
       };
 
-      this.quoteCache.set(upperSymbol, { quote, timestamp: Date.now() });
-      this.logger.log(`Fetched quote for ${upperSymbol}: $${quote.price}`);
+      this.quoteCache.set(sym, { quote, timestamp: Date.now() });
       return quote;
-    } catch (err) {
-      this.logger.error(`Failed to fetch quote for ${upperSymbol}`, err);
-      // Return stale cache if available
+    } catch {
       return cached?.quote ?? null;
     }
   }
 
-  // ─── Get full watchlist with live prices ────────────────────────
   async getWatchlistWithPrices(userId: string): Promise<WatchlistItem[]> {
     const items = await this.watchlistRepo.find({
       where: { userId },
@@ -125,31 +114,17 @@ export class StocksService {
     );
   }
 
-  // ─── Add symbol to watchlist ────────────────────────────────────
   async addToWatchlist(userId: string, symbol: string): Promise<StockWatchlist> {
-    const upperSymbol = symbol.toUpperCase();
-
-    // Check for duplicate (unique constraint would also catch it, but give a friendlier error)
-    const existing = await this.watchlistRepo.findOne({
-      where: { userId, symbol: upperSymbol },
-    });
-    if (existing) {
-      throw new ConflictException(`${upperSymbol} is already in your watchlist`);
-    }
-
-    const entry = this.watchlistRepo.create({ userId, symbol: upperSymbol });
-    return this.watchlistRepo.save(entry);
+    const sym = symbol.toUpperCase();
+    const existing = await this.watchlistRepo.findOne({ where: { userId, symbol: sym } });
+    if (existing) throw new ConflictException(`${sym} is already in your watchlist`);
+    return this.watchlistRepo.save(this.watchlistRepo.create({ userId, symbol: sym }));
   }
 
-  // ─── Remove symbol from watchlist ──────────────────────────────
   async removeFromWatchlist(userId: string, symbol: string): Promise<void> {
-    const upperSymbol = symbol.toUpperCase();
-    const entry = await this.watchlistRepo.findOne({
-      where: { userId, symbol: upperSymbol },
-    });
-    if (!entry) {
-      throw new NotFoundException(`${upperSymbol} not found in your watchlist`);
-    }
+    const sym = symbol.toUpperCase();
+    const entry = await this.watchlistRepo.findOne({ where: { userId, symbol: sym } });
+    if (!entry) throw new NotFoundException(`${sym} not found in your watchlist`);
     await this.watchlistRepo.remove(entry);
   }
 }

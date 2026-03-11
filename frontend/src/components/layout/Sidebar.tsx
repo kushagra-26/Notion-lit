@@ -14,6 +14,7 @@ import {
   Newspaper,
   Github,
   BarChart2,
+  Sparkles,
   Settings,
   Plus,
   Loader2,
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { label: 'Stocks',    href: '/stocks',   icon: BarChart2 },
   { label: 'News',      href: '/news',     icon: Newspaper },
   { label: 'GitHub',    href: '/github',   icon: Github },
+  { label: 'AI',        href: '/ai',       icon: Sparkles },
 ];
 
 export function Sidebar() {

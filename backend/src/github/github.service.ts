@@ -1,7 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
-// ─── Public interfaces ────────────────────────────────────────────────────────
 
 export interface GithubProfile {
   login: string;
@@ -35,8 +33,6 @@ export interface GithubEvent {
   createdAt: string;
 }
 
-// ─── Internal cache shape ─────────────────────────────────────────────────────
-
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
@@ -44,8 +40,7 @@ interface CacheEntry<T> {
 
 @Injectable()
 export class GithubService {
-  private readonly logger = new Logger(GithubService.name);
-  private readonly CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+  private readonly CACHE_TTL = 1 * 60 * 60 * 1000;
 
   private profileCache: CacheEntry<GithubProfile> | null = null;
   private reposCache: CacheEntry<GithubRepo[]> | null = null;
@@ -53,180 +48,92 @@ export class GithubService {
 
   constructor(private readonly config: ConfigService) {}
 
-  // ─── Shared fetch helper with auth header ──────────────────────
   private async githubFetch(url: string): Promise<Response> {
     const token = this.config.get<string>('GITHUB_TOKEN');
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
     };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     return fetch(url, { headers });
   }
 
-  // ─── Authenticated user profile ────────────────────────────────
   async getProfile(): Promise<GithubProfile | null> {
-    const token = this.config.get<string>('GITHUB_TOKEN');
-    if (!token) {
-      this.logger.warn('GITHUB_TOKEN is not set — skipping profile fetch');
-      return null;
-    }
-
+    if (!this.config.get<string>('GITHUB_TOKEN')) return null;
     if (this.profileCache && Date.now() - this.profileCache.timestamp < this.CACHE_TTL) {
-      this.logger.debug('Cache hit: GitHub profile');
       return this.profileCache.data;
     }
-
     try {
       const res = await this.githubFetch('https://api.github.com/user');
-      if (!res.ok) {
-        throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
-      }
-
+      if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
       const raw = (await res.json()) as {
-        login: string;
-        name: string | null;
-        avatar_url: string;
-        bio: string | null;
-        public_repos: number;
-        followers: number;
-        following: number;
-        html_url: string;
+        login: string; name: string | null; avatar_url: string; bio: string | null;
+        public_repos: number; followers: number; following: number; html_url: string;
       };
-
       const profile: GithubProfile = {
-        login: raw.login,
-        name: raw.name,
-        avatarUrl: raw.avatar_url,
-        bio: raw.bio,
-        publicRepos: raw.public_repos,
-        followers: raw.followers,
-        following: raw.following,
-        url: raw.html_url,
+        login: raw.login, name: raw.name, avatarUrl: raw.avatar_url,
+        bio: raw.bio, publicRepos: raw.public_repos, followers: raw.followers,
+        following: raw.following, url: raw.html_url,
       };
-
       this.profileCache = { data: profile, timestamp: Date.now() };
-      this.logger.log(`Fetched GitHub profile for ${profile.login}`);
       return profile;
-    } catch (err) {
-      this.logger.error('Failed to fetch GitHub profile', err);
+    } catch {
       return this.profileCache?.data ?? null;
     }
   }
 
-  // ─── Authenticated user repos (sorted by last update) ──────────
   async getRepos(): Promise<GithubRepo[]> {
-    const token = this.config.get<string>('GITHUB_TOKEN');
-    if (!token) {
-      this.logger.warn('GITHUB_TOKEN is not set — skipping repos fetch');
-      return [];
-    }
-
+    if (!this.config.get<string>('GITHUB_TOKEN')) return [];
     if (this.reposCache && Date.now() - this.reposCache.timestamp < this.CACHE_TTL) {
-      this.logger.debug('Cache hit: GitHub repos');
       return this.reposCache.data;
     }
-
     try {
-      const res = await this.githubFetch(
-        'https://api.github.com/user/repos?sort=updated&per_page=10',
-      );
-      if (!res.ok) {
-        throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
-      }
-
+      const res = await this.githubFetch('https://api.github.com/user/repos?sort=updated&per_page=10');
+      if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
       const raw = (await res.json()) as Array<{
-        id: number;
-        name: string;
-        full_name: string;
-        description: string | null;
-        html_url: string;
-        stargazers_count: number;
-        forks_count: number;
-        language: string | null;
-        updated_at: string;
-        private: boolean;
+        id: number; name: string; full_name: string; description: string | null;
+        html_url: string; stargazers_count: number; forks_count: number;
+        language: string | null; updated_at: string; private: boolean;
       }>;
-
-      const repos: GithubRepo[] = raw.map((r) => ({
-        id: r.id,
-        name: r.name,
-        fullName: r.full_name,
-        description: r.description,
-        url: r.html_url,
-        stars: r.stargazers_count,
-        forks: r.forks_count,
-        language: r.language,
-        updatedAt: r.updated_at,
-        isPrivate: r.private,
+      const repos = raw.map((r) => ({
+        id: r.id, name: r.name, fullName: r.full_name, description: r.description,
+        url: r.html_url, stars: r.stargazers_count, forks: r.forks_count,
+        language: r.language, updatedAt: r.updated_at, isPrivate: r.private,
       }));
-
       this.reposCache = { data: repos, timestamp: Date.now() };
-      this.logger.log(`Fetched ${repos.length} GitHub repos`);
       return repos;
-    } catch (err) {
-      this.logger.error('Failed to fetch GitHub repos', err);
+    } catch {
       return this.reposCache?.data ?? [];
     }
   }
 
-  // ─── Recent public activity for configured username ─────────────
   async getActivity(): Promise<GithubEvent[]> {
     const token = this.config.get<string>('GITHUB_TOKEN');
     const username = this.config.get<string>('GITHUB_USERNAME');
-
-    if (!token || !username) {
-      this.logger.warn(
-        'GITHUB_TOKEN or GITHUB_USERNAME not set — skipping activity fetch',
-      );
-      return [];
-    }
-
+    if (!token || !username) return [];
     if (this.activityCache && Date.now() - this.activityCache.timestamp < this.CACHE_TTL) {
-      this.logger.debug('Cache hit: GitHub activity');
       return this.activityCache.data;
     }
-
     try {
-      const res = await this.githubFetch(
-        `https://api.github.com/users/${username}/events?per_page=20`,
-      );
-      if (!res.ok) {
-        throw new Error(`GitHub API error: ${res.status} ${res.statusText}`);
-      }
-
+      const res = await this.githubFetch(`https://api.github.com/users/${username}/events?per_page=20`);
+      if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
       const raw = (await res.json()) as Array<{
-        id: string;
-        type: string;
-        repo: { name: string };
-        payload: Record<string, unknown>;
-        created_at: string;
+        id: string; type: string; repo: { name: string };
+        payload: Record<string, unknown>; created_at: string;
       }>;
-
-      const events: GithubEvent[] = raw.map((e) => ({
-        id: e.id,
-        type: e.type,
-        repoName: e.repo.name,
+      const events = raw.map((e) => ({
+        id: e.id, type: e.type, repoName: e.repo.name,
         message: this.extractEventMessage(e.type, e.payload),
         createdAt: e.created_at,
       }));
-
       this.activityCache = { data: events, timestamp: Date.now() };
-      this.logger.log(`Fetched ${events.length} GitHub events for ${username}`);
       return events;
-    } catch (err) {
-      this.logger.error('Failed to fetch GitHub activity', err);
+    } catch {
       return this.activityCache?.data ?? [];
     }
   }
 
-  // ─── Extract a human-readable message from an event payload ─────
-  private extractEventMessage(
-    type: string,
-    payload: Record<string, unknown>,
-  ): string {
+  private extractEventMessage(type: string, payload: Record<string, unknown>): string {
     switch (type) {
       case 'PushEvent': {
         const commits = payload['commits'] as Array<{ message: string }> | undefined;

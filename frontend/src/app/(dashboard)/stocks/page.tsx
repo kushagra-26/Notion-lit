@@ -158,7 +158,7 @@ export default function StocksPage() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Add ticker symbol (e.g. AAPL)"
+                placeholder="Ticker symbol (AAPL, RELIANCE.NS, TCS.BO…)"
                 className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -208,7 +208,7 @@ export default function StocksPage() {
 
         {/* API note */}
         <p className="text-xs text-muted-foreground/60 text-center">
-          Powered by Alpha Vantage · Prices may be delayed 15–20 min
+          Powered by Yahoo Finance · Free · US stocks, Indian NSE (.NS), BSE (.BO) · Prices may be delayed 15–20 min
         </p>
       </div>
     </div>

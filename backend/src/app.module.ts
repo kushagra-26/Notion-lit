@@ -12,6 +12,7 @@ import { JournalModule } from './journal/journal.module';
 import { LearningModule } from './learning/learning.module';
 import { StocksModule } from './stocks/stocks.module';
 import { GithubModule } from './github/github.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { GithubModule } from './github/github.module';
     LearningModule,
     StocksModule,
     GithubModule,
+    AiModule,
   ],
 })
 export class AppModule {}

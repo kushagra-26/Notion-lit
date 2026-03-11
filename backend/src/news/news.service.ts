@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 export interface NewsArticle {
@@ -17,24 +17,18 @@ interface CacheEntry {
 
 @Injectable()
 export class NewsService {
-  private readonly logger = new Logger(NewsService.name);
   private cache: CacheEntry | null = null;
   private readonly CACHE_TTL = 2 * 60 * 60 * 1000; // 2 hours
 
   constructor(private readonly config: ConfigService) {}
 
   async getTechNews(): Promise<NewsArticle[]> {
-    // Return cached data if still valid
     if (this.cache && Date.now() - this.cache.timestamp < this.CACHE_TTL) {
-      this.logger.debug('Returning cached news');
       return this.cache.data;
     }
 
     const apiKey = this.config.get<string>('NEWS_API_KEY');
-    if (!apiKey) {
-      this.logger.warn('NEWS_API_KEY is not set — returning empty news list');
-      return [];
-    }
+    if (!apiKey) return [];
 
     try {
       const url =
@@ -42,10 +36,7 @@ export class NewsService {
         `?category=technology&language=en&pageSize=20&apiKey=${apiKey}`;
 
       const res = await fetch(url);
-
-      if (!res.ok) {
-        throw new Error(`NewsAPI error: ${res.status} ${res.statusText}`);
-      }
+      if (!res.ok) throw new Error(`NewsAPI error: ${res.status}`);
 
       const body = (await res.json()) as {
         articles: Array<{
@@ -70,11 +61,8 @@ export class NewsService {
         }));
 
       this.cache = { data: articles, timestamp: Date.now() };
-      this.logger.log(`Fetched ${articles.length} tech articles`);
       return articles;
-    } catch (err) {
-      this.logger.error('Failed to fetch tech news', err);
-      // Return stale cache rather than nothing if available
+    } catch {
       return this.cache?.data ?? [];
     }
   }
