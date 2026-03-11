@@ -36,6 +36,9 @@ export class Page {
   @Column({ default: 0 })
   position: number;
 
+  @Column('simple-array', { nullable: true, default: null })
+  tags: string[] | null;
+
   @OneToMany(() => Block, (b) => b.page, { cascade: true })
   blocks: Block[];
 

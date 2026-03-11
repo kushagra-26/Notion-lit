@@ -47,9 +47,15 @@ export const pagesApi = {
   get: (id: string) => api.get(`/pages/${id}`),
   create: (data: { title?: string; parentId?: string }) =>
     api.post('/pages', data),
-  update: (id: string, data: Partial<{ title: string; icon: string }>) =>
+  update: (id: string, data: Partial<{ title: string; icon: string; tags: string[] }>) =>
     api.patch(`/pages/${id}`, data),
   delete: (id: string) => api.delete(`/pages/${id}`),
+};
+
+// ─── Search ──────────────────────────────
+export const searchApi = {
+  search: (q: string) =>
+    api.get<{ id: string; type: 'page' | 'task'; title: string; subtitle?: string; url: string }[]>(`/search?q=${encodeURIComponent(q)}`),
 };
 
 // ─── Blocks ──────────────────────────────
@@ -84,6 +90,16 @@ export const journalApi = {
   update: (id: string, data: Partial<{ title: string; content: string; mood: string }>) =>
     api.patch(`/journal/${id}`, data),
   delete: (id: string) => api.delete(`/journal/${id}`),
+};
+
+// ─── Users ───────────────────────────────
+export const usersApi = {
+  me: () => api.get('/users/me'),
+  updateProfile: (data: { username?: string; email?: string; avatarUrl?: string }) =>
+    api.patch('/users/me', data),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.patch('/users/me/password', { currentPassword, newPassword }),
+  deleteAccount: () => api.delete('/users/me'),
 };
 
 // ─── AI ──────────────────────────────────

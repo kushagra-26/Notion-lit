@@ -54,7 +54,7 @@ export interface Page {
   isDeleted: boolean;
   position: number;
   blocks?: Block[];
-  tags?: Tag[];
+  tags?: string[];
   createdAt: string;
   updatedAt: string;
 }

@@ -34,10 +34,15 @@ export function usePages() {
     await pagesApi.update(id, { title });
   }, []);
 
+  const updatePageTags = useCallback(async (id: string, tags: string[]) => {
+    setPages((prev) => prev.map((p) => (p.id === id ? { ...p, tags } : p)));
+    await pagesApi.update(id, { tags });
+  }, []);
+
   const deletePage = useCallback(async (id: string) => {
     setPages((prev) => prev.filter((p) => p.id !== id));
     await pagesApi.delete(id);
   }, []);
 
-  return { pages, isLoading, error, createPage, updatePageTitle, deletePage };
+  return { pages, isLoading, error, createPage, updatePageTitle, updatePageTags, deletePage };
 }

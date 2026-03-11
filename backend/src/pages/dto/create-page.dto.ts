@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreatePageDto {
   @IsOptional()
@@ -13,4 +13,9 @@ export class CreatePageDto {
   @IsOptional()
   @IsString()
   icon?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }

@@ -14,9 +14,18 @@ import {
   Github,
   Plus,
   FilePlus,
+  Search,
 } from 'lucide-react';
-import { pagesApi } from '@/lib/api';
+import { pagesApi, searchApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+interface SearchResult {
+  id: string;
+  type: 'page' | 'task';
+  title: string;
+  subtitle?: string;
+  url: string;
+}
 
 interface Command {
   id: string;
@@ -33,9 +42,11 @@ interface CommandPaletteProps {
 }
 
 export function CommandPalette({ open, onClose }: CommandPaletteProps) {
-  const [query, setQuery]       = useState('');
+  const [query, setQuery]         = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
-  const [loading, setLoading]   = useState<string | null>(null);
+  const [loading, setLoading]     = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const searchDebounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const listRef = useRef<HTMLUListElement>(null);
   const router  = useRouter();
 
@@ -153,17 +164,42 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
   // Reset state when palette opens/closes
   useEffect(() => {
-    if (!open) { setQuery(''); setActiveIdx(0); setLoading(null); }
+    if (!open) { setQuery(''); setActiveIdx(0); setLoading(null); setSearchResults([]); }
   }, [open]);
 
-  // Reset active index when query changes
-  useEffect(() => { setActiveIdx(0); }, [query]);
+  // Debounced search when query changes
+  useEffect(() => {
+    setActiveIdx(0);
+    clearTimeout(searchDebounce.current);
+    if (query.trim().length >= 2) {
+      searchDebounce.current = setTimeout(async () => {
+        try {
+          const res = await searchApi.search(query.trim());
+          setSearchResults(res.data);
+        } catch {
+          setSearchResults([]);
+        }
+      }, 300);
+    } else {
+      setSearchResults([]);
+    }
+  }, [query]);
 
   // Scroll active item into view
   useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>('[data-active="true"]');
     el?.scrollIntoView({ block: 'nearest' });
   }, [activeIdx]);
+
+  // All navigable items: search results (if any) + commands
+  const allItems: Array<{ id: string; label: string; action: () => void }> = [
+    ...searchResults.map((r) => ({
+      id: `sr-${r.id}`,
+      label: r.title,
+      action: () => { router.push(r.url); onClose(); },
+    })),
+    ...flat.map((c) => ({ id: c.id, label: c.label, action: () => run(c) })),
+  ];
 
   // Keyboard navigation
   useEffect(() => {
@@ -172,7 +208,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       if (e.key === 'Escape') { onClose(); return; }
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setActiveIdx((i) => Math.min(i + 1, flat.length - 1));
+        setActiveIdx((i) => Math.min(i + 1, allItems.length - 1));
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
@@ -180,13 +216,12 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       }
       if (e.key === 'Enter') {
         e.preventDefault();
-        const cmd = flat[activeIdx];
-        if (cmd) run(cmd);
+        allItems[activeIdx]?.action();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, flat, activeIdx, onClose]);
+  }, [open, allItems, activeIdx, onClose]);
 
   if (!open) return null;
 
@@ -194,11 +229,13 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     if (cmds.length === 0) return null;
     return (
       <>
-        <li className="px-3 pt-2 pb-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {label}
-          </span>
-        </li>
+        {label && (
+          <li className="px-3 pt-2 pb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {label}
+            </span>
+          </li>
+        )}
         {cmds.map((cmd, i) => {
           const globalIdx = offset + i;
           const Icon = cmd.icon;
@@ -246,7 +283,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
       >
         {/* Input */}
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-          <CheckSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
             autoFocus
             value={query}
@@ -266,14 +303,51 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
 
         {/* Results */}
         <ul ref={listRef} className="max-h-80 overflow-y-auto p-2">
-          {flat.length === 0 ? (
+          {/* Real search results */}
+          {searchResults.length > 0 && (
+            <>
+              <li className="px-3 pt-2 pb-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Results</span>
+              </li>
+              {searchResults.map((r, i) => {
+                const isActive = activeIdx === i;
+                return (
+                  <li key={`sr-${r.id}`}>
+                    <button
+                      data-active={isActive}
+                      onMouseEnter={() => setActiveIdx(i)}
+                      onClick={() => { router.push(r.url); onClose(); }}
+                      className={cn(
+                        'flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                        isActive ? 'bg-accent text-accent-foreground' : 'text-foreground',
+                      )}
+                    >
+                      {r.type === 'page' ? (
+                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <CheckSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className="flex-1 text-left truncate">{r.title}</span>
+                      <span className="text-xs text-muted-foreground capitalize">{r.type}</span>
+                    </button>
+                  </li>
+                );
+              })}
+              <li className="px-3 pt-2 pb-1 border-t border-border mt-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Commands</span>
+              </li>
+            </>
+          )}
+
+          {/* Commands */}
+          {flat.length === 0 && searchResults.length === 0 ? (
             <li className="px-3 py-8 text-center text-sm text-muted-foreground">
-              No results for "{query}"
+              No results for &quot;{query}&quot;
             </li>
           ) : (
             <>
-              {renderGroup('Create', createCmds, 0)}
-              {renderGroup('Navigate', navigateCmds, createCmds.length)}
+              {renderGroup(searchResults.length > 0 ? '' : 'Create', createCmds, searchResults.length)}
+              {renderGroup(searchResults.length > 0 ? '' : 'Navigate', navigateCmds, searchResults.length + createCmds.length)}
             </>
           )}
         </ul>

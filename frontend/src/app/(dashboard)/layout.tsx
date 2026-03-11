@@ -7,6 +7,7 @@ import { CommandPalette } from '@/components/command-palette/CommandPalette';
 import { useAuth } from '@/contexts/AuthContext';
 import { CommandPaletteContext } from '@/contexts/CommandPaletteContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
+import { PomodoroTimer } from '@/components/pomodoro/PomodoroTimer';
 
 export default function DashboardLayout({
   children,
@@ -54,6 +55,7 @@ export default function DashboardLayout({
           <Sidebar />
           <main className="flex flex-1 flex-col overflow-hidden">{children}</main>
           <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
+          <PomodoroTimer />
         </div>
       </SidebarProvider>
     </CommandPaletteContext.Provider>

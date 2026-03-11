@@ -1,21 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, FileText, Trash2, Search } from 'lucide-react';
+import { Plus, FileText, Trash2, Search, Tag, X } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { usePages } from '@/hooks/usePages';
 import { formatRelativeDate } from '@/lib/utils';
+import { cn } from '@/lib/utils';
+
+// Collect all unique tags across pages
+function collectTags(pages: { tags?: string[] }[]): string[] {
+  const set = new Set<string>();
+  pages.forEach((p) => p.tags?.forEach((t) => set.add(t)));
+  return Array.from(set).sort();
+}
 
 export default function NotesPage() {
   const router = useRouter();
   const { pages, isLoading, createPage, deletePage } = usePages();
-  const [query, setQuery] = useState('');
-  const [creating, setCreating] = useState(false);
+  const [query, setQuery]         = useState('');
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [creating, setCreating]   = useState(false);
 
-  const filtered = query
-    ? pages.filter((p) => p.title.toLowerCase().includes(query.toLowerCase()))
-    : pages;
+  const allTags = useMemo(() => collectTags(pages), [pages]);
+
+  const filtered = useMemo(() => {
+    let list = pages;
+    if (query) list = list.filter((p) => p.title.toLowerCase().includes(query.toLowerCase()));
+    if (activeTag) list = list.filter((p) => p.tags?.includes(activeTag));
+    return list;
+  }, [pages, query, activeTag]);
 
   async function handleCreate() {
     setCreating(true);
@@ -33,7 +47,7 @@ export default function NotesPage() {
 
       <div className="flex flex-1 flex-col overflow-auto p-6">
         {/* Top bar */}
-        <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="mb-4 flex items-center justify-between gap-4">
           {/* Search */}
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -55,6 +69,30 @@ export default function NotesPage() {
           </button>
         </div>
 
+        {/* Tag filter pills */}
+        {allTags.length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-1.5">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground mr-1">
+              <Tag className="h-3 w-3" /> Tags:
+            </span>
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                className={cn(
+                  'flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs transition-colors',
+                  activeTag === tag
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground',
+                )}
+              >
+                {tag}
+                {activeTag === tag && <X className="h-2.5 w-2.5" />}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Loading */}
         {isLoading && (
           <div className="flex flex-1 items-center justify-center">
@@ -70,13 +108,13 @@ export default function NotesPage() {
             </div>
             <div>
               <p className="font-medium text-sm">
-                {query ? 'No matching pages' : 'No pages yet'}
+                {query || activeTag ? 'No matching pages' : 'No pages yet'}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {query ? 'Try a different search' : 'Create your first page to get started'}
+                {query || activeTag ? 'Try a different search or tag' : 'Create your first page to get started'}
               </p>
             </div>
-            {!query && (
+            {!query && !activeTag && (
               <button
                 onClick={handleCreate}
                 className="mt-2 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-accent transition-colors"
@@ -105,6 +143,29 @@ export default function NotesPage() {
                 <p className="text-sm font-medium leading-snug line-clamp-2">
                   {page.title || 'Untitled'}
                 </p>
+
+                {/* Tags */}
+                {page.tags && page.tags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {page.tags.slice(0, 3).map((tag) => (
+                      <span
+                        key={tag}
+                        onClick={(e) => { e.stopPropagation(); setActiveTag(tag === activeTag ? null : tag); }}
+                        className={cn(
+                          'rounded-full border px-1.5 py-px text-[10px] cursor-pointer transition-colors',
+                          activeTag === tag
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border text-muted-foreground hover:border-foreground/30',
+                        )}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                    {page.tags.length > 3 && (
+                      <span className="text-[10px] text-muted-foreground">+{page.tags.length - 3}</span>
+                    )}
+                  </div>
+                )}
 
                 {/* Meta */}
                 <p className="mt-auto pt-3 text-xs text-muted-foreground">

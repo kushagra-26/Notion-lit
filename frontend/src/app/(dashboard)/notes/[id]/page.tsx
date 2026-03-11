@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArrowLeft, MoreHorizontal, Trash2, Tag, X } from 'lucide-react';
 import { BlockEditor } from '@/components/editor/BlockEditor';
 import { usePages } from '@/hooks/usePages';
+import { cn } from '@/lib/utils';
 
 export default function NoteEditorPage({
   params,
@@ -13,16 +14,21 @@ export default function NoteEditorPage({
 }) {
   const { id } = params;
   const router = useRouter();
-  const { pages, isLoading, updatePageTitle, deletePage } = usePages();
+  const { pages, isLoading, updatePageTitle, updatePageTags, deletePage } = usePages();
 
   const page = pages.find((p) => p.id === id);
-  const [title, setTitle] = useState('');
+  const [title, setTitle]       = useState('');
+  const [tags, setTags]         = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Sync title from fetched page
+  // Sync title + tags from fetched page
   useEffect(() => {
-    if (page) setTitle(page.title);
+    if (page) {
+      setTitle(page.title);
+      setTags(page.tags ?? []);
+    }
   }, [page]);
 
   // Close menu on outside click
@@ -55,6 +61,21 @@ export default function NoteEditorPage({
     el.style.height = 'auto';
     el.style.height = el.scrollHeight + 'px';
   }, [title]);
+
+  const addTag = useCallback((tag: string) => {
+    const cleaned = tag.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!cleaned || tags.includes(cleaned)) return;
+    const next = [...tags, cleaned];
+    setTags(next);
+    updatePageTags(id, next);
+    setTagInput('');
+  }, [tags, id, updatePageTags]);
+
+  const removeTag = useCallback((tag: string) => {
+    const next = tags.filter((t) => t !== tag);
+    setTags(next);
+    updatePageTags(id, next);
+  }, [tags, id, updatePageTags]);
 
   async function handleDelete() {
     await deletePage(id);
@@ -142,8 +163,46 @@ export default function NoteEditorPage({
             }}
             placeholder="Untitled"
             rows={1}
-            className="mb-4 w-full resize-none bg-transparent text-4xl font-bold tracking-tight outline-none placeholder:text-muted-foreground/30"
+            className="mb-3 w-full resize-none bg-transparent text-4xl font-bold tracking-tight outline-none placeholder:text-muted-foreground/30"
           />
+
+          {/* Tags */}
+          <div className="mb-6 flex flex-wrap items-center gap-1.5">
+            <Tag className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="group flex items-center gap-0.5 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
+              >
+                {tag}
+                <button
+                  onClick={() => removeTag(tag)}
+                  className="ml-0.5 rounded-full p-0.5 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-red-500 transition-all"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </span>
+            ))}
+            <input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ',') {
+                  e.preventDefault();
+                  addTag(tagInput);
+                }
+                if (e.key === 'Backspace' && !tagInput && tags.length > 0) {
+                  removeTag(tags[tags.length - 1]);
+                }
+              }}
+              onBlur={() => { if (tagInput) addTag(tagInput); }}
+              placeholder={tags.length === 0 ? 'Add tags…' : '+'}
+              className={cn(
+                'min-w-0 bg-transparent text-xs outline-none placeholder:text-muted-foreground/40 text-muted-foreground',
+                tags.length === 0 ? 'w-24' : 'w-8',
+              )}
+            />
+          </div>
 
           {/* Block editor */}
           <div className="block-editor-area">

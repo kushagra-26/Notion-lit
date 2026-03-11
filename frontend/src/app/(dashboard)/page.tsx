@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { CheckSquare, FileText, Flame, TrendingUp, ArrowRight, Circle, BarChart2, Github } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
@@ -8,6 +8,7 @@ import { NewsWidget } from '@/components/news/NewsWidget';
 import { useTasks } from '@/hooks/useTasks';
 import { usePages } from '@/hooks/usePages';
 import { useHabits } from '@/hooks/useHabits';
+import { useLearning } from '@/hooks/useLearning';
 import { cn } from '@/lib/utils';
 import type { Task, Page } from '@/types';
 
@@ -167,11 +168,33 @@ function RecentPagesWidget({ pages, loading }: { pages: Page[]; loading: boolean
 }
 
 // ─── Quick notes scratchpad ───────────────
+const QUICK_NOTES_KEY = 'notion-lite:quick-notes';
+
 function QuickNotes() {
+  const [value, setValue] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Load persisted value on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(QUICK_NOTES_KEY);
+    if (saved) setValue(saved);
+  }, []);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setValue(text);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      localStorage.setItem(QUICK_NOTES_KEY, text);
+    }, 500);
+  }, []);
+
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <h2 className="mb-3 text-sm font-medium">Quick Notes</h2>
       <textarea
+        value={value}
+        onChange={handleChange}
         placeholder="Start writing…"
         className="w-full resize-none bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         rows={5}
@@ -185,6 +208,7 @@ export default function DashboardPage() {
   const { allTasks, isLoading: tasksLoading } = useTasks({});
   const { pages, isLoading: pagesLoading }   = usePages();
   const { habits, bestStreak, todayCount: habitsToday, isLoading: habitsLoading } = useHabits();
+  const { activeTopics, avgProgress, isLoading: learningLoading } = useLearning();
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -268,9 +292,14 @@ export default function DashboardPage() {
           <StatCard
             icon={TrendingUp}
             label="Learning"
-            value="—"
-            sub="Track your progress"
+            value={learningLoading ? '…' : activeTopics.length > 0 ? `${activeTopics.length}` : '—'}
+            sub={
+              learningLoading ? undefined
+              : activeTopics.length === 0 ? 'No active topics'
+              : `${avgProgress}% avg progress`
+            }
             href="/learning"
+            loading={learningLoading}
           />
         </div>
 
