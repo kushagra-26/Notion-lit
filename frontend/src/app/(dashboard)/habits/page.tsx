@@ -1,17 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Flame, Plus, CheckCircle2 } from 'lucide-react';
+import { Flame, Plus, CheckCircle2, BarChart2 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { HabitCard } from '@/components/habits/HabitCard';
 import { HabitModal } from '@/components/habits/HabitModal';
+import { HabitAnalytics } from '@/components/habits/HabitAnalytics';
 import { useHabits } from '@/hooks/useHabits';
+import { cn } from '@/lib/utils';
 import type { Habit } from '@/types';
 
 export default function HabitsPage() {
   const { habits, isLoading, todayCount, bestStreak, createHabit, updateHabit, deleteHabit, toggleHabit } = useHabits();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Habit | undefined>();
+  const [tab, setTab] = useState<'today' | 'analytics'>('today');
 
   function openCreate() { setEditing(undefined); setModalOpen(true); }
   function openEdit(h: Habit) { setEditing(h); setModalOpen(true); }
@@ -59,10 +62,41 @@ export default function HabitsPage() {
           </div>
         </div>
 
-        {/* Habits list */}
-        <div>
-          <div className="mb-4 flex items-center justify-between">
-            <div>
+        {/* Tab bar */}
+        <div className="flex items-center justify-between">
+          <div className="flex rounded-lg border border-border p-0.5">
+            <button
+              onClick={() => setTab('today')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                tab === 'today' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Flame className="h-3.5 w-3.5" /> Today
+            </button>
+            <button
+              onClick={() => setTab('analytics')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                tab === 'analytics' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <BarChart2 className="h-3.5 w-3.5" /> Analytics
+            </button>
+          </div>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New Habit
+          </button>
+        </div>
+
+        {/* Today tab */}
+        {tab === 'today' && (
+          <div>
+            <div className="mb-4">
               <h2 className="text-sm font-medium">{today}</h2>
               {habits.length > 0 && todayCount === habits.length && (
                 <p className="mt-0.5 flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
@@ -71,47 +105,58 @@ export default function HabitsPage() {
                 </p>
               )}
             </div>
-            <button
-              onClick={openCreate}
-              className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              New Habit
-            </button>
-          </div>
 
-          {isLoading ? (
-            <div className="space-y-3">
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
+                ))}
+              </div>
+            ) : habits.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16 text-center">
+                <Flame className="mb-3 h-10 w-10 text-muted-foreground/30" />
+                <p className="text-sm font-medium text-muted-foreground">No habits yet</p>
+                <p className="mt-1 text-xs text-muted-foreground/70">Create your first habit to start tracking</p>
+                <button
+                  onClick={openCreate}
+                  className="mt-4 flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Create habit
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {habits.map((habit) => (
+                  <HabitCard
+                    key={habit.id}
+                    habit={habit}
+                    onToggle={toggleHabit}
+                    onEdit={openEdit}
+                    onDelete={deleteHabit}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Analytics tab */}
+        {tab === 'analytics' && (
+          isLoading ? (
+            <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 animate-pulse rounded-lg bg-muted" />
+                <div key={i} className="h-48 animate-pulse rounded-lg bg-muted" />
               ))}
             </div>
           ) : habits.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16 text-center">
-              <Flame className="mb-3 h-10 w-10 text-muted-foreground/30" />
-              <p className="text-sm font-medium text-muted-foreground">No habits yet</p>
-              <p className="mt-1 text-xs text-muted-foreground/70">Create your first habit to start tracking</p>
-              <button
-                onClick={openCreate}
-                className="mt-4 flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity"
-              >
-                <Plus className="h-3.5 w-3.5" /> Create habit
-              </button>
+              <BarChart2 className="mb-3 h-10 w-10 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">Create habits to see analytics</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {habits.map((habit) => (
-                <HabitCard
-                  key={habit.id}
-                  habit={habit}
-                  onToggle={toggleHabit}
-                  onEdit={openEdit}
-                  onDelete={deleteHabit}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+            <HabitAnalytics habits={habits} />
+          )
+        )}
       </div>
 
       <HabitModal

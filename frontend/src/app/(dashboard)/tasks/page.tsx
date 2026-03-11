@@ -13,8 +13,12 @@ import type { Task, TaskStatus } from '@/types';
 
 type View = 'kanban' | 'list';
 
+const TODAY = new Date().toLocaleDateString('en-US', {
+  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+});
+
 export default function TasksPage() {
-  const [view, setView]               = useState<View>('kanban');
+  const [view, setView]               = useState<View>('list');
   const [filters, setFilters]         = useState<TFilters>({});
   const [modalOpen, setModalOpen]     = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -78,6 +82,12 @@ export default function TasksPage() {
 
       <div className="flex flex-1 flex-col overflow-auto">
         <div className="p-6 space-y-5">
+
+          {/* ── Date header ──────────────────── */}
+          <div>
+            <p className="text-xs text-muted-foreground">{TODAY}</p>
+            <h2 className="mt-0.5 text-lg font-semibold">My Tasks</h2>
+          </div>
 
           {/* ── Top bar ─────────────────────── */}
           <div className="flex flex-wrap items-center justify-between gap-3">
