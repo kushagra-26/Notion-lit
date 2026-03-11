@@ -48,7 +48,7 @@ export function BlockRenderer({ block, className }: Props) {
           <span
             className={cn(
               'text-sm leading-relaxed',
-              content.checked && 'text-muted-foreground line-through',
+              (content as any)?.checked && 'text-muted-foreground line-through',
             )}
           >
             {text}
