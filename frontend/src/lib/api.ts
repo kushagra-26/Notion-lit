@@ -86,6 +86,31 @@ export const journalApi = {
   delete: (id: string) => api.delete(`/journal/${id}`),
 };
 
+// ─── Learning ────────────────────────────
+export const learningApi = {
+  list: () => api.get('/learning'),
+  create: (data: { name: string; description?: string; category?: string; progress?: number; status?: string; resources?: string; targetDate?: string }) =>
+    api.post('/learning', data),
+  update: (id: string, data: Partial<{ name: string; description: string; category: string; progress: number; status: string; resources: string; targetDate: string }>) =>
+    api.patch(`/learning/${id}`, data),
+  delete: (id: string) => api.delete(`/learning/${id}`),
+};
+
+// ─── Stocks ──────────────────────────────
+export const stocksApi = {
+  watchlist: () => api.get('/stocks/watchlist'),
+  quote: (symbol: string) => api.get(`/stocks/quote/${symbol}`),
+  add: (symbol: string) => api.post('/stocks/watchlist', { symbol }),
+  remove: (symbol: string) => api.delete(`/stocks/watchlist/${symbol}`),
+};
+
+// ─── GitHub ──────────────────────────────
+export const githubApi = {
+  profile: () => api.get('/github/profile'),
+  repos: () => api.get('/github/repos'),
+  activity: () => api.get('/github/activity'),
+};
+
 // ─── News ────────────────────────────────
 export const newsApi = {
   techNews: () => api.get<NewsArticle[]>('/news/tech'),

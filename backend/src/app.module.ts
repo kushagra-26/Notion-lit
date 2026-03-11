@@ -9,6 +9,9 @@ import { TasksModule } from './tasks/tasks.module';
 import { NewsModule } from './news/news.module';
 import { HabitsModule } from './habits/habits.module';
 import { JournalModule } from './journal/journal.module';
+import { LearningModule } from './learning/learning.module';
+import { StocksModule } from './stocks/stocks.module';
+import { GithubModule } from './github/github.module';
 
 @Module({
   imports: [
@@ -41,6 +44,9 @@ import { JournalModule } from './journal/journal.module';
     NewsModule,
     HabitsModule,
     JournalModule,
+    LearningModule,
+    StocksModule,
+    GithubModule,
   ],
 })
 export class AppModule {}

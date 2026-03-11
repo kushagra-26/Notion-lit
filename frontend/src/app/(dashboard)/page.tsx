@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { CheckSquare, FileText, Flame, TrendingUp, ArrowRight, Circle } from 'lucide-react';
+import { CheckSquare, FileText, Flame, TrendingUp, ArrowRight, Circle, BarChart2, Github } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { NewsWidget } from '@/components/news/NewsWidget';
 import { useTasks } from '@/hooks/useTasks';
@@ -269,7 +269,8 @@ export default function DashboardPage() {
             icon={TrendingUp}
             label="Learning"
             value="—"
-            sub="Coming in Phase 3"
+            sub="Track your progress"
+            href="/learning"
           />
         </div>
 
@@ -289,17 +290,30 @@ export default function DashboardPage() {
             <NewsWidget />
           </div>
 
-          {/* Phase 3 placeholders */}
+          {/* Phase 3 quick links */}
           <div className="flex flex-col gap-4">
-            {['Stock Watchlist', 'GitHub Activity'].map((name) => (
-              <div
-                key={name}
-                className="rounded-lg border border-dashed border-border bg-card/50 p-4 text-center"
-              >
-                <p className="text-sm text-muted-foreground">{name}</p>
-                <p className="mt-1 text-xs text-muted-foreground/60">Phase 3</p>
+            <Link
+              href="/stocks"
+              className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/30"
+            >
+              <BarChart2 className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Stock Watchlist</p>
+                <p className="text-xs text-muted-foreground">Track your stocks</p>
               </div>
-            ))}
+              <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
+            </Link>
+            <Link
+              href="/github"
+              className="flex items-center gap-3 rounded-lg border border-border bg-card p-4 transition-colors hover:bg-accent/30"
+            >
+              <Github className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">GitHub Dashboard</p>
+                <p className="text-xs text-muted-foreground">Repos & activity</p>
+              </div>
+              <ArrowRight className="ml-auto h-4 w-4 text-muted-foreground" />
+            </Link>
           </div>
         </div>
       </div>

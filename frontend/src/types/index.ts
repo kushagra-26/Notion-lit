@@ -111,6 +111,78 @@ export interface JournalEntry {
   updatedAt: string;
 }
 
+// ─── Learning ────────────────────────────
+
+export type LearningStatus = 'active' | 'completed' | 'paused';
+
+export interface LearningTopic {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string;
+  progress: number;
+  status: LearningStatus;
+  category?: string;
+  resources?: string;
+  targetDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ─── Stocks ──────────────────────────────
+
+export interface StockQuote {
+  symbol: string;
+  price: number;
+  change: number;
+  changePercent: number;
+  high: number;
+  low: number;
+  volume: number;
+  previousClose: number;
+}
+
+export interface WatchlistItem {
+  id: string;
+  symbol: string;
+  quote: StockQuote | null;
+  addedAt: string;
+}
+
+// ─── GitHub ──────────────────────────────
+
+export interface GithubProfile {
+  login: string;
+  name: string;
+  avatarUrl: string;
+  bio: string;
+  publicRepos: number;
+  followers: number;
+  following: number;
+  url: string;
+}
+
+export interface GithubRepo {
+  id: string;
+  name: string;
+  fullName: string;
+  description: string;
+  url: string;
+  stars: number;
+  forks: number;
+  language: string;
+  updatedAt: string;
+  isPrivate: boolean;
+}
+
+export interface GithubEvent {
+  id: string;
+  type: string;
+  repoName: string;
+  message: string;
+  createdAt: string;
+}
+
 // ─── Tags ────────────────────────────────
 
 export interface Tag {

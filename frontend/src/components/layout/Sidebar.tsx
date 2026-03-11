@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Newspaper,
   Github,
+  BarChart2,
   Settings,
   Plus,
   Loader2,
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { label: 'Journal',   href: '/journal',  icon: BookOpen },
   { label: 'Habits',    href: '/habits',   icon: Flame },
   { label: 'Learning',  href: '/learning', icon: TrendingUp },
+  { label: 'Stocks',    href: '/stocks',   icon: BarChart2 },
   { label: 'News',      href: '/news',     icon: Newspaper },
   { label: 'GitHub',    href: '/github',   icon: Github },
 ];

@@ -17,28 +17,34 @@ const MOODS: { value: JournalMood; emoji: string; label: string; color: string }
 ];
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const d = new Date(dateStr + 'T12:00:00Z');
+  return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+}
+
+function getLocalToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function isToday(dateStr: string): boolean {
-  return dateStr === new Date().toISOString().slice(0, 10);
+  return dateStr === getLocalToday();
 }
 
 // ─── Date navigation ──────────────────────
+// Use T12:00:00Z (noon UTC) to avoid local-timezone offsets flipping the date
 function prevDay(d: string): string {
-  const date = new Date(d + 'T00:00:00');
-  date.setDate(date.getDate() - 1);
+  const date = new Date(d + 'T12:00:00Z');
+  date.setUTCDate(date.getUTCDate() - 1);
   return date.toISOString().slice(0, 10);
 }
 function nextDay(d: string): string {
-  const date = new Date(d + 'T00:00:00');
-  date.setDate(date.getDate() + 1);
+  const date = new Date(d + 'T12:00:00Z');
+  date.setUTCDate(date.getUTCDate() + 1);
   return date.toISOString().slice(0, 10);
 }
 
 export default function JournalPage() {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(getLocalToday);
   const { entry, entries, isLoading, isSaving, save, deleteEntry } = useJournal(selectedDate);
 
   const [title, setTitle]     = useState('');
@@ -68,7 +74,7 @@ export default function JournalPage() {
     save({ title, content, mood: next || undefined });
   }
 
-  const isFuture = selectedDate > new Date().toISOString().slice(0, 10);
+  const isFuture = selectedDate > getLocalToday();
 
   return (
     <div className="flex flex-1 overflow-hidden">
