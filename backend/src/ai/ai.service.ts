@@ -8,8 +8,8 @@ export interface ChatMessage {
 
 @Injectable()
 export class AiService {
-  private readonly MODEL = 'gemini-1.5-flash';
-  private readonly BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+ private readonly MODEL = 'gemini-2.0-flash';
+private readonly BASE_URL = 'https://generativelanguage.googleapis.com/v1/models';
 
   constructor(private readonly config: ConfigService) {}
 
@@ -23,10 +23,12 @@ export class AiService {
     const apiKey = this.getApiKey();
 
     const body = {
-      ...(systemInstruction && {
-        system_instruction: { parts: [{ text: systemInstruction }] },
-      }),
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      contents: [
+        ...(systemInstruction
+          ? [{ role: 'user', parts: [{ text: systemInstruction }] }]
+          : []),
+        { role: 'user', parts: [{ text: prompt }] },
+      ],
       generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
     };
 
@@ -57,10 +59,17 @@ export class AiService {
     }));
 
     const body = {
-      system_instruction: {
-        parts: [{ text: 'You are a helpful productivity assistant for a developer life OS app. Be concise and practical.' }],
-      },
-      contents,
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: 'You are a helpful productivity assistant for a developer life OS app. Be concise and practical.',
+            },
+          ],
+        },
+        ...contents,
+      ],
       generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
     };
 
